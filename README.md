@@ -1,10 +1,10 @@
 # MailMind AI — Intelligent Email Assistant
 
-A local-first email intelligence assistant built with Python, Ollama, Gmail API, SQLite, Telegram and Playwright.
+An email intelligence assistant built with Python, the Gemini API, Gmail API, SQLite, Telegram and Playwright.
 
 ## Features
 - Read-only Gmail ingestion using the official Gmail API.
-- Ollama-powered classification and concise summaries.
+- Gemini-powered email classification and concise summaries.
 - Categories: Important, Newsletter, Promotional, General.
 - Optional Telegram alerts for Important messages.
 - SQLite deduplication to prevent repeated notifications.
@@ -15,8 +15,7 @@ A local-first email intelligence assistant built with Python, Ollama, Gmail API,
 
 ## Requirements
 - Python 3.10+
-- Ollama installed and running
-- Model such as `qwen2.5:3b`
+- Gemini API key
 - Google Cloud project with Gmail API enabled and OAuth Desktop credentials
 - Optional Telegram bot
 
@@ -30,10 +29,16 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Install Ollama from https://ollama.com/download, then:
+## Configure Gemini
+1. Open https://aistudio.google.com/apikey and create a Gemini API key.
+2. Open the project's `.env` file.
+3. Set `GEMINI_API_KEY=your_api_key`.
+4. Keep the key private; never commit `.env` to GitHub.
+
+The default model is `gemini-2.5-flash`. You can change it with `GEMINI_MODEL`. The application uses Google's official `google-genai` Python SDK and requests structured JSON output for predictable classification.
+
+Test Gemini without connecting Gmail:
 ```powershell
-ollama pull qwen2.5:3b
-ollama serve
 python -m app.main --test-ai
 ```
 
@@ -72,13 +77,13 @@ python -m app.browser_demo
 The demo visits example.com and extracts its heading. It does not log in to Gmail or handle account credentials.
 
 ## Deployment
-Use an always-on Linux VPS or home server because Ollama needs a persistent local model runtime. Install Python, Git and Ollama; clone the repo; install dependencies; pull the model; configure `.env`; securely provision Google OAuth files; then run under systemd or Docker with persistent storage for `data/`, OAuth token and Ollama models. Complete OAuth interactively on a trusted machine first if the server has no browser, then transfer the token securely. Never expose Ollama's local API publicly.
+Deploy on a persistent Python host (Linux VPS or home server). Install Python and Git, clone the repo, install dependencies, configure `.env`, securely provision Google OAuth files, then run under systemd or Docker with persistent storage for `data/` and OAuth token. Gemini inference uses the hosted Gemini API, so the server needs outbound internet access and a valid API key; Ollama is not required. Complete Gmail OAuth interactively on a trusted machine first if the server has no browser, then transfer the token securely.
 
 ## Security
 - Gmail scope is read-only.
 - Email body is treated as untrusted data in the classifier prompt.
-- No email content is sent to a hosted AI provider; local Ollama handles inference.
+- Email content is sent to Google's Gemini API for classification and summarization; review Google's API data-use and retention terms before processing sensitive mailbox content.
 - When enabled, summaries are sent to Telegram.
-- Never commit `.env`, `credentials.json`, `token.json`, database files, logs or browser profiles.
+- Never commit `.env`, API keys, `credentials.json`, `token.json`, database files, logs or browser profiles.
 
-Starter implementation; test OAuth, Ollama and Telegram in your environment before unattended operation.
+Starter implementation; test Gemini, Gmail OAuth and Telegram configuration in your environment before unattended operation.
