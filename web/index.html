@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MailMind Dashboard</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --panel-2: #1f2937;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --primary: #60a5fa;
+        --accent: #2dd4bf;
+        --danger: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .container {
+        max-width: 1100px;
+        margin: 40px auto;
+        padding: 20px;
+      }
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 28px;
+      }
+      .brand {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      .login-btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px 18px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .scan-btn {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+        padding: 11px 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        margin-left: 8px;
+      }
+      .scan-btn:disabled { opacity: 0.5; cursor: wait; }
+      .top-actions { display: flex; align-items: center; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 20px;
+      }
+      .label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .value {
+        font-size: 28px;
+        font-weight: 700;
+        margin-top: 10px;
+      }
+      .summary-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .summary-item {
+        background: var(--panel-2);
+        border-radius: 12px;
+        padding: 18px;
+      }
+      .muted { color: var(--muted); }
+      .status { color: var(--muted); margin: -12px 0 20px; min-height: 20px; }
+      .recent-item {
+        background: var(--panel);
+        border-radius: 12px;
+        padding: 18px;
+        margin-top: 12px;
+      }
+      .badge {
+        display: inline-block;
+        background: rgba(96,165,250,0.14);
+        color: var(--primary);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <div class="brand">MailMind Product MVP</div>
+        <div class="top-actions">
+          <button class="scan-btn" id="scan-btn" onclick="scanInbox()">Analyze inbox</button>
+          <button class="login-btn" onclick="window.location.href='/api/oauth/google'">Login with Google</button>
+        </div>
+      </div>
+
+      <div class="status" id="status" role="status" aria-live="polite">Connect Gmail to analyze unread messages.</div>
+
+      <div class="grid" id="stats-grid"></div>
+
+      <div class="summary-list" id="summary-list"></div>
+
+      <div class="card" style="margin-top:24px;">
+        <div class="label">Recent important mail</div>
+        <div id="recent-list"></div>
+      </div>
+    </div>
+
+    <script>
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, character => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[character]);
+      }
+
+      async function scanInbox() {
+        const status = document.getElementById('status');
+        const button = document.getElementById('scan-btn');
+        button.disabled = true;
+        status.textContent = 'Starting inbox analysis…';
+        try {
+          const response = await fetch('/api/scan', { method: 'POST' });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.message || 'Could not start inbox analysis.');
+          await loadDashboard();
+        } catch (error) {
+          status.textContent = error.message;
+          button.disabled = false;
+        }
+      }
+
+      async function loadDashboard() {
+        const response = await fetch('/api/dashboard', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Could not load dashboard data.');
+        const data = await response.json();
+        const status = document.getElementById('status');
+        const loginButton = document.querySelector('.login-btn');
+        const scanButton = document.getElementById('scan-btn');
+        loginButton.textContent = data.connected ? 'Reconnect Google' : 'Login with Google';
+        scanButton.disabled = !data.connected || data.scan.state === 'running' || data.scan.state === 'queued';
+
+        if (!data.connected) {
+          status.textContent = 'Connect Gmail to analyze unread messages.';
+        } else if (data.scan.state === 'running' || data.scan.state === 'queued') {
+          status.textContent = `Connected${data.user.email ? ` as ${data.user.email}` : ''}. Inbox analysis is running…`;
+        } else if (data.scan.state === 'error' || data.scan.state === 'partial') {
+          status.textContent = `Connected, but some messages could not be analyzed. Check the server log and AI configuration. Analyzed: ${data.scan.processed}.`;
+        } else {
+          status.textContent = `Connected${data.user.email ? ` as ${data.user.email}` : ''}. ${data.totals.analyzed} message(s) analyzed.` +
+            (data.telegram_configured ? ' Important-message Telegram alerts are enabled.' : ' Telegram notifications are not configured.');
+        }
+
+        const stats = document.getElementById('stats-grid');
+        stats.innerHTML = `
+          <div class="card">
+            <div class="label">Analyzed</div>
+            <div class="value">${data.totals.analyzed}</div>
+          </div>
+          <div class="card">
+            <div class="label">Important</div>
+            <div class="value">${data.totals.important}</div>
+          </div>
+          <div class="card">
+            <div class="label">Newsletters</div>
+            <div class="value">${data.totals.newsletter}</div>
+          </div>
+          <div class="card">
+            <div class="label">Promotional</div>
+            <div class="value">${data.totals.promotional}</div>
+          </div>
+          <div class="card">
+            <div class="label">General</div>
+            <div class="value">${data.totals.general}</div>
+          </div>
+        `;
+
+        const summaryList = document.getElementById('summary-list');
+        summaryList.innerHTML = data.summary.map(item => `
+          <div class="summary-item">
+            <div class="badge">${escapeHtml(item.category)}</div>
+            <div style="font-size:22px; font-weight:700; margin-bottom:8px;">${item.count}</div>
+            <div class="muted">${escapeHtml(item.summary)}</div>
+          </div>
+        `).join('');
+
+        const recentList = document.getElementById('recent-list');
+        recentList.innerHTML = data.recent.map(item => `
+          <div class="recent-item">
+            <div class="badge">${escapeHtml(item.category)} · ${escapeHtml(item.priority)}</div>
+            <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(item.subject)}</div>
+            <div class="muted">From: ${escapeHtml(item.from)}</div>
+            <div class="muted">Analyzed: ${escapeHtml(item.processed_at)}</div>
+            <div style="margin-top:8px;">${escapeHtml(item.summary)}</div>
+          </div>
+        `).join('');
+
+        if (data.scan.state === 'running' || data.scan.state === 'queued') {
+          window.setTimeout(loadDashboard, 3000);
+        }
+      }
+
+      loadDashboard().catch(error => {
+        document.getElementById('status').textContent = error.message;
+      });
+    </script>
+  </body>
+</html>

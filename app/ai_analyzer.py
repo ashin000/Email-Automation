@@ -3,7 +3,6 @@ import json
 import logging
 
 from google import genai
-from openai import OpenAI
 
 from app.config import settings
 from app.models import EmailAnalysis, EmailMessage
@@ -66,6 +65,8 @@ def analyze_email(email: EmailMessage) -> EmailAnalysis:
     if settings.ai_provider == "openrouter":
         if not settings.openrouter_api_key:
             raise RuntimeError("OPENROUTER_API_KEY is missing. Add your OpenRouter API key to the .env file.")
+
+        from openai import OpenAI
 
         client = OpenAI(api_key=settings.openrouter_api_key, base_url=settings.openrouter_base_url)
         response = client.chat.completions.create(

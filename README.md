@@ -69,6 +69,17 @@ AI-only test:
 python -m app.main --test-ai
 ```
 
+## Product dashboard
+Start the web dashboard and API:
+```powershell
+python -m uvicorn app.product_api:app --host 127.0.0.1 --port 8001 --reload
+```
+Then open:
+- http://localhost:8001/
+- http://localhost:8001/api/health
+
+The dashboard uses the saved Gmail OAuth token to scan unread inbox messages after sign-in, classify and summarize them, and store results in SQLite. Telegram alerts are sent for Important messages when `TELEGRAM_ENABLED=true`, `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_CHAT_ID` are configured. This local MVP uses one shared `token.json` and one configured Telegram chat; it is not yet a multi-user hosted service.
+
 ## Playwright demo
 ```powershell
 playwright install chromium

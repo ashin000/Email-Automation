@@ -14,6 +14,7 @@ def process_batch():
     emails = fetch_unread_emails()
     log.info("Fetched %d message(s)", len(emails))
     count = 0
+    failed = 0
     for email in emails:
         if is_processed(email.message_id):
             continue
@@ -25,7 +26,9 @@ def process_batch():
                 count += 1
         except Exception:
             log.exception("Could not process message %s", email.message_id)
+            failed += 1
     log.info("New messages processed: %d", count)
+    return {"processed": count, "failed": failed}
 
 def main():
     parser = argparse.ArgumentParser(description="MailMind AI email intelligence assistant")

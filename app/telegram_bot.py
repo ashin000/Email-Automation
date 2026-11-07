@@ -22,7 +22,9 @@ def send_email_notification(email: EmailMessage, analysis: EmailAnalysis) -> boo
         f"<b>Priority:</b> {_escape(analysis.priority)}\n"
         f"<b>From:</b> {_escape(email.sender)}\n"
         f"<b>Subject:</b> {_escape(email.subject)}\n\n"
-        f"<b>Summary:</b> {_escape(analysis.summary)}")
+        f"<b>Received:</b> {_escape(email.received_at or 'Date unavailable')}\n\n"
+        f"<b>Summary:</b> {_escape(analysis.summary[:1200])}\n\n"
+        f"<b>Why it matters:</b> {_escape(analysis.reasons[:700] or 'No additional reason provided.')}")
     try:
         response = requests.post(f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
             json={"chat_id":settings.telegram_chat_id,"text":text,"parse_mode":"HTML","disable_web_page_preview":True},timeout=20)

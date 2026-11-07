@@ -56,3 +56,8 @@ def fetch_unread_emails(max_results: int | None = None) -> list[EmailMessage]:
         body = _extract_body(payload).strip() or msg.get("snippet", "")
         emails.append(EmailMessage(msg["id"], sender, headers.get("subject", "(No subject)"), body[:30000], headers.get("date", ""), msg.get("snippet", "")))
     return emails
+
+def get_gmail_profile() -> dict:
+    """Return the signed-in Gmail profile details using the read-only token."""
+    service = get_gmail_service()
+    return service.users().getProfile(userId="me").execute()
