@@ -9,8 +9,8 @@ load_dotenv(ROOT / ".env")
 
 @dataclass(frozen=True)
 class Settings:
-    ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-    ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
+    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     gmail_credentials_file: Path = ROOT / os.getenv("GMAIL_CREDENTIALS_FILE", "credentials.json")
     gmail_token_file: Path = ROOT / os.getenv("GMAIL_TOKEN_FILE", "token.json")
     gmail_query: str = os.getenv("GMAIL_QUERY", "is:unread in:inbox")
